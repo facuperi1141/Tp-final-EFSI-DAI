@@ -3,25 +3,37 @@ import { HttpError } from '../utils/HttpError.js';
 // Proxy a la API de Deezer. Deezer no pide clave pero no permite CORS desde el navegador,
 // por eso el front le pide al backend y el backend a Deezer.
 const DEEZER_URL = 'https://api.deezer.com';
-
 async function deezer(path) {
   let res;
+
   try {
-    res = await fetch(`${DEEZER_URL}${path}`, { signal: AbortSignal.timeout(8000) });
-  } catch {
+    res = await fetch(`${DEEZER_URL}${path}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (error) {
+    console.error('ERROR DE CONEXIÓN CON DEEZER:', error);
     throw HttpError.badGateway('No se pudo conectar con Deezer');
   }
-  if (!res.ok) throw HttpError.badGateway();
 
-  const data = await res.json();
-  // Deezer responde 200 con { error } cuando algo sale mal; el código 800 es "no existe"
-  if (data.error) {
-    if (data.error.code === 800) throw HttpError.notFound('No se encontró en Deezer');
+  if (!res.ok) {
+    console.error('RESPUESTA HTTP DE DEEZER:', res.status);
     throw HttpError.badGateway();
   }
+
+  const data = await res.json();
+
+  if (data.error) {
+    console.error('ERROR DEVUELTO POR DEEZER:', data.error);
+
+    if (data.error.code === 800) {
+      throw HttpError.notFound('No se encontró en Deezer');
+    }
+
+    throw HttpError.badGateway();
+  }
+
   return data;
 }
-
 const yearOf = (date) => {
   const year = Number(String(date ?? '').slice(0, 4));
   return year >= 1800 && year <= 2100 ? year : null;
