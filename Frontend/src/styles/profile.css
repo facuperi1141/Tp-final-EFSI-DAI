@@ -1,0 +1,228 @@
+/* Perfil */
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  background: linear-gradient(115deg, #24543b, #17362b);
+  border-radius: 12px;
+  padding: 28px;
+}
+
+.profile-hero .big-avatar {
+  width: 130px;
+  height: 130px;
+  margin: 0;
+  font-size: 48px;
+  font-weight: 800;
+  box-shadow: 0 10px 30px #0006;
+}
+
+.profile-hero-info {
+  min-width: 0;
+}
+
+.profile-hero h2 {
+  font-size: clamp(26px, 4vw, 38px);
+  margin: 0;
+  letter-spacing: -1px;
+}
+
+.profile-hero .muted {
+  margin: 4px 0 0;
+}
+
+.profile-bio {
+  color: #dde8e0;
+  line-height: 1.5;
+  max-width: 640px;
+  margin: 12px 0 0;
+}
+
+.profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #c1d5c7;
+}
+
+.profile-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.profile-genres span {
+  background: #ffffff1f;
+  border-radius: 20px;
+  padding: 5px 11px;
+  font-size: 12px;
+}
+
+/* Formularios de perfil y preferencias */
+.profile-form label,
+.profile-form .field-label {
+  display: block;
+  font-size: 13px;
+  color: #ddd;
+  margin-bottom: 15px;
+}
+
+.profile-form .field-label {
+  margin-bottom: 0;
+}
+
+.profile-form input:not([type='checkbox']),
+.profile-form textarea,
+.profile-form select {
+  display: block;
+  width: 100%;
+  background: #343434;
+  border: 1px solid #505050;
+  color: #fff;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 7px;
+  outline: none;
+}
+
+.profile-form input:focus,
+.profile-form textarea:focus,
+.profile-form select:focus {
+  border-color: #1ed760;
+}
+
+.profile-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.profile-form .check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  color: #888;
+  margin-top: 4px;
+}
+
+.form-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.form-footer .success {
+  margin: 0;
+}
+
+/* Favoritos: las cards globales son botones, acá son links */
+.section .music-card {
+  display: block;
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.activity-list li {
+  display: grid;
+  grid-template-columns: 7px 1fr auto;
+  align-items: start;
+  gap: 12px;
+  font-size: 13px;
+  color: #ddd;
+}
+
+.activity-list i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1ed760;
+  margin-top: 6px;
+}
+
+.activity-list small {
+  color: #888;
+  white-space: nowrap;
+}
+
+.review-list {
+  display: grid;
+  gap: 8px;
+}
+
+.review-item {
+  display: flex;
+  gap: 14px;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.review-item:hover {
+  background: #2a2a2a;
+}
+
+.review-item .cover {
+  width: 52px;
+  height: 52px;
+  flex: none;
+}
+
+.review-item div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.review-item p {
+  margin: 4px 0 0;
+  color: #ccc;
+  font-size: 13px;
+  line-height: 1.5;
+  /* Se muestran hasta 3 líneas de la reseña */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .profile-hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px 18px;
+  }
+
+  .profile-meta,
+  .profile-genres {
+    justify-content: center;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}

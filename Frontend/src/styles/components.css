@@ -1,0 +1,94 @@
+/* Estilos de los componentes compartidos de components/UI */
+
+.avatar,
+.big-avatar {
+  overflow: hidden;
+  flex: none;
+}
+
+.avatar img,
+.big-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: color 0.15s, background 0.15s;
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: #fff;
+  background: #333;
+}
+
+.icon-btn.liked {
+  color: #1ed760;
+}
+
+.icon-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.star-rating {
+  display: flex;
+  gap: 2px;
+}
+
+.star-rating button {
+  background: none;
+  border: 0;
+  padding: 2px;
+  color: #555;
+}
+
+.star-rating button.chosen {
+  color: #1ed760;
+}
+
+.star-rating button:hover:not(:disabled) {
+  color: #3be477;
+}
+
+.star-rating svg {
+  width: 16px;
+  height: 16px;
+}
+
+.error-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.error-box .text-link {
+  color: #ffd0d0;
+}
+
+.outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #eee;
+}
+
+.outline:hover:not(:disabled) {
+  border-color: #fff;
+}
+
+.outline.danger:hover:not(:disabled) {
+  border-color: #ff8a8a;
+  color: #ff8a8a;
+}
