@@ -31,3 +31,27 @@ export function isHttpUrl(value) {
     return false;
   }
 }
+
+// Extrae errores por campo (details de Zod) y mensaje general desde una respuesta de Axios
+export function getFormErrors(error) {
+  const data = error?.response?.data;
+  const details = data?.details ?? data?.error?.details ?? [];
+  const fieldErrors = {};
+
+  if (Array.isArray(details)) {
+    for (const detail of details) {
+      if (detail.field && !fieldErrors[detail.field]) {
+        fieldErrors[detail.field] = detail.message;
+      }
+    }
+  }
+
+  const message =
+    Object.keys(fieldErrors).length === 0
+      ? (data?.message ?? data?.error?.message ?? 'Ocurrió un error inesperado')
+      : '';
+
+  return { message, fieldErrors };
+}
+
+
