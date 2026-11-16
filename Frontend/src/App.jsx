@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import api from './services/api.js';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import Avatar from './components/UI/Avatar.jsx';
@@ -7,9 +7,12 @@ import CollectionsPage from './pages/CollectionsPage.jsx';
 import CollectionDetailPage from './pages/CollectionDetailPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home as HomeI, Search, Library, ListMusic, UserRound, ChartNoAxesColumn, LogOut, Plus, Heart, Play, Music2, Star, ChevronRight, ArrowLeft, X, Disc3, Headphones, Sparkles, LoaderCircle } from 'lucide-react';
+import { Home as HomeI, Search, Library, ListMusic, UserRound, ChartNoAxesColumn, LogOut, Plus, Heart, Play, Pause, Music2, Star, ChevronRight, ArrowLeft, X, Disc3, Headphones, Sparkles, LoaderCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getFormErrors } from './utils/forms.js';
+import { useDebounce } from './hooks/useDebounce.js';
+import { getChart, searchMusic } from './services/search.service.js';
+
 
 const fallback = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80';
 const labels = { quiero_escuchar: 'Quiero escuchar', escuchando: 'Escuchando', escuchado: 'Escuchado', favorito: 'Favorito' };
@@ -93,16 +96,41 @@ function Cover({ src, className = '' }) {
   return <img className={'cover ' + className} src={src || fallback} onError={e => e.currentTarget.src = fallback} />;
 }
 
-function Card({ x, open }) {
+function Card({ x, open, isPlaying = false, onTogglePreview = null }) {
   return (
-    <button className="music-card" onClick={open}>
+    <div
+      className="music-card"
+      onClick={open}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && open()}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="coverbox">
         <Cover src={x.cover_url} />
-        <span><Play fill="currentColor" /></span>
+        {onTogglePreview && x.preview_url ? (
+          <span
+            role="button"
+            tabIndex={0}
+            title={isPlaying ? 'Pausar adelanto' : 'Escuchar adelanto'}
+            aria-label={isPlaying ? 'Pausar adelanto' : 'Escuchar adelanto'}
+            onClick={(e) => onTogglePreview(e, x)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                onTogglePreview(e, x);
+              }
+            }}
+          >
+            {isPlaying ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}
+          </span>
+        ) : (
+          <span><Play fill="currentColor" /></span>
+        )}
       </div>
       <b>{x.title}</b>
       <small>{x.artist_name || x.title}</small>
-    </button>
+    </div>
   );
 }
 
@@ -170,47 +198,191 @@ function Home() {
   );
 }
 
+const EXPLORE_LIMIT = 25;
+
 function Explore() {
-  let [q, setQ] = useState(''), [type, setType] = useState('track'), [results, setResults] = useState([]), [searched, setSearched] = useState(false), [busy, setBusy] = useState(false);
-  let nav = useNavigate();
+  const [q, setQ] = useState('');
+  const debouncedQ = useDebounce(q, 400);
+  const [type, setType] = useState('track');
+  const [page, setPage] = useState(0);
+  const [results, setResults] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [playingId, setPlayingId] = useState(null);
+
+  const audioRef = useRef(null);
+  const nav = useNavigate();
+
+  const searched = Boolean(debouncedQ.trim());
+  const totalPages = Math.ceil(total / EXPLORE_LIMIT);
 
   useEffect(() => {
-    api.get('/search/chart', { params: { type: 'track', limit: 12 } }).then(r => setResults(r.data.results || [])).catch(() => {});
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, []);
 
-  async function search(e) {
-    e.preventDefault();
-    if (!q.trim()) return;
-    setBusy(true);
-    setSearched(true);
-    try {
-      let r = await api.get('/search', { params: { q, type, limit: 30 } });
-      setResults(r.data.results || []);
-    } catch {
-      setResults([]);
-    } finally {
-      setBusy(false);
+  useEffect(() => {
+    let active = true;
+
+    async function fetchExplore() {
+      setBusy(true);
+      try {
+        if (!debouncedQ.trim()) {
+          const chartResults = await getChart({ type, limit: 12 });
+          if (!active) return;
+          setResults(chartResults);
+          setTotal(chartResults.length);
+        } else {
+          const data = await searchMusic({
+            q: debouncedQ,
+            type,
+            limit: EXPLORE_LIMIT,
+            offset: page * EXPLORE_LIMIT,
+          });
+          if (!active) return;
+          setResults(data.results || []);
+          setTotal(data.total ?? 0);
+        }
+      } catch {
+        if (!active) return;
+        setResults([]);
+        setTotal(0);
+      } finally {
+        if (active) setBusy(false);
+      }
     }
+
+    fetchExplore();
+    return () => {
+      active = false;
+    };
+  }, [debouncedQ, type, page]);
+
+  function togglePreview(e, item) {
+    e.stopPropagation();
+    if (!item.preview_url) return;
+
+    if (playingId === item.external_id) {
+      audioRef.current?.pause();
+      setPlayingId(null);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    const audio = new Audio(item.preview_url);
+    audioRef.current = audio;
+    setPlayingId(item.external_id);
+
+    audio.onended = () => setPlayingId(null);
+    audio.onerror = () => setPlayingId(null);
+    audio.play().catch(() => setPlayingId(null));
+  }
+
+  function handleQueryChange(e) {
+    setQ(e.target.value);
+    setPage(0);
+  }
+
+  function handleTypeChange(newType) {
+    if (newType === type) return;
+    setType(newType);
+    setPage(0);
+  }
+
+  function goToPage(nextPage) {
+    setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   return (
     <div className="page">
       <Head tag="ENCONTRÁ TU PRÓXIMA CANCIÓN" title="Explorar" sub="Descubrí música nueva y sumala a tu colección." />
-      <form className="search" onSubmit={search}>
+
+      <form className="search" onSubmit={(e) => e.preventDefault()}>
         <Search />
-        <input placeholder="¿Qué querés escuchar?" value={q} onChange={e => setQ(e.target.value)} />
-        <button className="btn">{busy ? 'Buscando…' : 'Buscar'}</button>
+        <input
+          placeholder="¿Qué querés escuchar?"
+          value={q}
+          onChange={handleQueryChange}
+        />
+        {q && (
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => { setQ(''); setPage(0); }}
+            aria-label="Limpiar búsqueda"
+          >
+            <X size={16} />
+          </button>
+        )}
       </form>
+
       <div className="pills">
         {[['track', 'Canciones'], ['album', 'Álbumes'], ['artist', 'Artistas']].map(([v, l]) => (
-          <button className={v === type ? 'on' : ''} onClick={() => setType(v)} key={v}>{l}</button>
+          <button
+            type="button"
+            className={v === type ? 'on' : ''}
+            onClick={() => handleTypeChange(v)}
+            key={v}
+          >
+            {l}
+          </button>
         ))}
       </div>
-      <Section title={searched ? 'Resultados' : 'Lo más escuchado'}>
+
+      <Section
+        title={searched ? `Resultados${total ? ` (${total})` : ''}` : 'Lo más escuchado'}
+        action={busy ? <small className="muted">Buscando…</small> : null}
+      >
         <div className="cards">
-          {results.map(x => <Card key={x.external_id} x={x} open={() => nav(`/detalle/${x.type}/${x.external_id}`)} />)}
+          {results.map((x) => (
+            <Card
+              key={x.external_id}
+              x={x}
+              open={() => nav(`/detalle/${x.type}/${x.external_id}`)}
+              isPlaying={playingId === x.external_id}
+              onTogglePreview={x.preview_url ? togglePreview : null}
+            />
+          ))}
         </div>
-        {!results.length && <div className="empty"><Search /><b>{searched ? 'No encontramos resultados' : 'Buscá música para empezar'}</b></div>}
+
+        {!busy && !results.length && (
+          <div className="empty">
+            <Search />
+            <b>{searched ? 'No encontramos resultados' : 'Buscá música para empezar'}</b>
+          </div>
+        )}
+
+        {searched && totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 24 }}>
+            <button
+              type="button"
+              className="outline"
+              disabled={page === 0 || busy}
+              onClick={() => goToPage(page - 1)}
+            >
+              Anterior
+            </button>
+            <small className="muted">
+              Página {page + 1} de {totalPages}
+            </small>
+            <button
+              type="button"
+              className="outline"
+              disabled={page + 1 >= totalPages || busy}
+              onClick={() => goToPage(page + 1)}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </Section>
     </div>
   );
